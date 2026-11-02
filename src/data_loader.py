@@ -2,51 +2,77 @@
 import pandas as pd
 from pathlib import Path
 
-# Project data directory
+
+# Dataset directory
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
+DETAILS_FILE = DATA_DIR / "StormEvents_details_all.csv"
 
-def inspect_datasets():
 
-    csv_files = list(DATA_DIR.glob("*.csv"))
+def load_details_data():
 
-    if not csv_files:
+    if not DETAILS_FILE.exists():
         raise FileNotFoundError(
-            f"No CSV files found in {DATA_DIR}"
+            f"Dataset not found: {DETAILS_FILE}"
         )
 
-    datasets = {}
+    print("Loading NOAA Storm Events Details...")
 
-    print("=" * 60)
-    print("NOAA STORM EVENTS DATASET INSPECTION")
-    print("=" * 60)
+    df = pd.read_csv(
+        DETAILS_FILE,
+        low_memory=False
+    )
 
-    for file in csv_files:
+    print("Dataset loaded successfully.")
+    print("Shape:", df.shape)
 
-        print(f"\nDataset: {file.name}")
+    return df
 
-        df = pd.read_csv(file, low_memory=False)
 
-        datasets[file.stem] = df
+def inspect_details_data(df):
 
-        print("-" * 40)
-        print("Rows:", df.shape[0])
-        print("Columns:", df.shape[1])
+    print("\n========== DATASET OVERVIEW ==========")
 
-        print("\nColumn names:")
-        print(df.columns.tolist())
+    print("Total records:", len(df))
+    print("Total columns:", len(df.columns))
 
-        print("\nData types:")
-        print(df.dtypes)
+    print("\n========== YEAR COVERAGE ==========")
 
-        print("\nFirst 5 records:")
-        print(df.head())
+    print(df["YEAR"].describe())
 
-        print("\nMissing values:")
-        print(df.isnull().sum().sum())
+    print("\n========== EVENT TYPE DISTRIBUTION ==========")
 
-    return datasets
+    print(df["EVENT_TYPE"].value_counts().head(15))
+
+    print("\n========== DUPLICATE CHECK ==========")
+
+    print("Duplicate EVENT_IDs:", df["EVENT_ID"].duplicated().sum())
+
+    print("\n========== MISSING VALUES ==========")
+
+    missing = df.isnull().sum()
+
+    missing = missing[missing > 0].sort_values(
+        ascending=False
+    )
+
+    print(missing.head(20))
+
+    print("\n========== NUMERICAL SUMMARY ==========")
+
+    print(
+        df[[
+            "MAGNITUDE",
+            "INJURIES_DIRECT",
+            "INJURIES_INDIRECT",
+            "DEATHS_DIRECT",
+            "DEATHS_INDIRECT"
+        ]].describe()
+    )
 
 
 if __name__ == "__main__":
-    inspect_datasets()
+
+    df = load_details_data()
+
+    inspect_details_data(df)
