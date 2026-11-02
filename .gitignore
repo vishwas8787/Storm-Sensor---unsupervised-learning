@@ -1,0 +1,26 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+
+# Dataset files (NOAA CSVs are large)
+data/raw/*.csv
+data/processed/*.csv
+
+# Generated outputs
+outputs/plots/
+outputs/metrics/
+outputs/cluster_profiles/
+
+# Temporary files
+*.log
+.DS_Store
