@@ -17,7 +17,7 @@ data/raw/*.csv
 data/processed/*.csv
 
 # Generated outputs
-outputs/plots/
+# outputs/plots/
 outputs/metrics/
 outputs/cluster_profiles/
 
