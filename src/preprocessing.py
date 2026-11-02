@@ -138,6 +138,7 @@ def preprocess_data(df):
 
         df[col] = pd.to_datetime(
             df[col],
+            format="%d-%b-%y %H:%M:%S",
             errors="coerce"
         )
 
