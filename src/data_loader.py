@@ -6,7 +6,7 @@ from pathlib import Path
 # Dataset directory
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "raw"
 
-DETAILS_FILE = DATA_DIR / "StormEvents_details_all.csv"
+DETAILS_FILE = DATA_DIR / "StormEvents_details_2010_2020.csv"
 
 
 def load_details_data():
@@ -39,6 +39,7 @@ def inspect_details_data(df):
     print("\n========== YEAR COVERAGE ==========")
 
     print(df["YEAR"].describe())
+    print("Year range:", int(df["YEAR"].min()), "to", int(df["YEAR"].max()))
 
     print("\n========== EVENT TYPE DISTRIBUTION ==========")
 

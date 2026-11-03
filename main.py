@@ -24,7 +24,7 @@ from src.preprocessing import preprocess_data
 
 ROOT = Path(__file__).resolve().parent
 PROCESSED = ROOT / "data" / "processed" / "cleaned_storm_data.csv"
-RAW = ROOT / "data" / "raw" / "StormEvents_details_all.csv"
+RAW = ROOT / "data" / "raw" / "StormEvents_details_2010_2020.csv"
 PLOTS = ROOT / "outputs" / "plots"
 METRICS = ROOT / "outputs" / "metrics"
 PROFILES = ROOT / "outputs" / "cluster_profiles"
@@ -39,10 +39,14 @@ LOAD_COLUMNS = [
 
 
 def load_analysis_data():
-    if PROCESSED.exists():
+    processed_is_current = (
+        PROCESSED.exists()
+        and (not RAW.exists() or PROCESSED.stat().st_mtime >= RAW.stat().st_mtime)
+    )
+    if processed_is_current:
         source = PROCESSED
     elif RAW.exists():
-        print("Processed dataset is missing; preprocessing the raw NOAA details file first.")
+        print("Processed dataset is missing or older than the raw NOAA file; preprocessing it first.")
         raw_data = pd.read_csv(RAW, low_memory=False)
         preprocess_data(raw_data)
         del raw_data
@@ -51,7 +55,7 @@ def load_analysis_data():
         source = RAW
     if not source.exists():
         raise FileNotFoundError(
-            "NOAA details CSV was not found. Place StormEvents_details_all.csv in data/raw."
+            "NOAA details CSV was not found. Place StormEvents_details_2010_2020.csv in data/raw."
         )
     print(f"Loading analysis columns from {source}")
     df = pd.read_csv(source, usecols=lambda col: col in LOAD_COLUMNS, low_memory=False)
@@ -67,6 +71,7 @@ def main():
     full = load_analysis_data()
     print("Loaded shape:", full.shape)
     total_rows = len(full)
+    year_min, year_max = int(full["YEAR"].min()), int(full["YEAR"].max())
 
     # EDA uses all rows; expensive clustering uses one reproducible random sample.
     sample = full.sample(n=min(SAMPLE_SIZE, len(full)), random_state=RANDOM_STATE).copy()
@@ -129,10 +134,24 @@ def main():
     comparison.to_csv(METRICS / "final_comparison.csv", index=False)
     selected_h_row = hierarchy.loc[hierarchy["configuration"] == best_h_name].iloc[0]
     selected_d_row = density.loc[density["configuration"] == best_d_name].iloc[0]
-    ward_k4_ari = adjusted_rand_score(hierarchy_labels[best_h_name], hierarchy_labels.get("ward_k4", hierarchy_labels[best_h_name]))
-    dbscan_neighbour = "dbscan_eps1.6_min15"
+    ward_neighbours = [name for name in hierarchy_labels if name.startswith("ward_k") and name != best_h_name]
+    ward_neighbour = min(
+        ward_neighbours,
+        key=lambda name: abs(int(name.rsplit("k", 1)[1]) - int(best_h_name.rsplit("k", 1)[1])),
+    ) if ward_neighbours and best_h_name.startswith("ward_k") else ""
+    if not ward_neighbour:
+        ward_neighbour = "ward_k4" if best_h_name != "ward_k4" else "ward_k3"
+    ward_neighbour_ari = adjusted_rand_score(hierarchy_labels[best_h_name], hierarchy_labels[ward_neighbour])
+    same_min_samples = density[
+        (density["min_samples"] == selected_d_row["min_samples"])
+        & (density["configuration"] != best_d_name)
+    ].copy()
+    if same_min_samples.empty:
+        same_min_samples = density[density["configuration"] != best_d_name].copy()
+    same_min_samples["eps_difference"] = (same_min_samples["eps"] - selected_d_row["eps"]).abs()
+    dbscan_neighbour = same_min_samples.sort_values("eps_difference").iloc[0]["configuration"]
     dbscan_neighbour_ari = adjusted_rand_score(
-        density_labels[best_d_name], density_labels.get(dbscan_neighbour, density_labels[best_d_name])
+        density_labels[best_d_name], density_labels[dbscan_neighbour]
     )
 
     pca, coords, loadings = fit_pca(X)
@@ -147,12 +166,13 @@ def main():
         write_profiles(sample, labels, "hierarchical" if name == best_h_name else "dbscan", PROFILES, PLOTS)
 
     (METRICS / "selection_notes.txt").write_text(
-        f"Analysis sample: {len(sample)} of {total_rows} dataset rows (random_state={RANDOM_STATE}; sample_size={SAMPLE_SIZE}).\n"
+        f"Dataset years: {year_min}-{year_max}; {total_rows} events.\n"
+        f"Analysis sample: {len(sample)} (random_state={RANDOM_STATE}; maximum_sample_size={SAMPLE_SIZE}).\n"
         f"Clustering was fit in standardized imputed feature space, not PCA space.\n"
         f"PCA PC1+PC2 explained variance: {pca.explained_variance_ratio_.sum():.4f}.\n"
         f"Selected hierarchical configuration: {best_h_name}. {hierarchical_note}\n"
         f"Hierarchical silhouette (deterministic evaluation sample): {selected_h_row['silhouette_evaluation_sample']:.4f}.\n"
-        f"ARI against ward_k4: {ward_k4_ari:.4f}.\n"
+        f"ARI against {ward_neighbour}: {ward_neighbour_ari:.4f}.\n"
         f"Selected DBSCAN configuration: {best_d_name}. {dbscan_note}\n"
         f"DBSCAN non-noise silhouette: {selected_d_row['silhouette_non_noise_evaluation_sample']:.4f}; noise: {selected_d_row['noise_count']} ({selected_d_row['noise_percentage']:.2f}%).\n"
         f"ARI against {dbscan_neighbour}: {dbscan_neighbour_ari:.4f}.\n"

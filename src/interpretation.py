@@ -29,5 +29,9 @@ def write_profiles(df, labels, name, output_dir, plot_dir):
     fig, ax = plt.subplots(figsize=(10, 6))
     sns.heatmap(scaled, cmap="vlag", center=0, annot=True, fmt=".1f", ax=ax)
     ax.set(title=f"{name.title()} median profiles (standardised for display)", xlabel="Feature", ylabel="Cluster")
-    fig.tight_layout(); fig.savefig(plot_dir / f"{name}_cluster_profile_heatmap.png", dpi=160); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(plot_dir / f"{name}_cluster_profile_heatmap.png", dpi=160)
+    if name == "hierarchical":
+        fig.savefig(plot_dir / "cluster_profile_heatmap.png", dpi=160)
+    plt.close(fig)
     return numeric, composition

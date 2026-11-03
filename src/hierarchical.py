@@ -29,7 +29,13 @@ def run_hierarchical(X, sample_df, out_dir, metrics_dir, cluster_counts=(3, 4, 5
         for k in cluster_counts:
             labels = fcluster(tree, t=k, criterion="maxclust")
             distinct = np.unique(labels)
-            score = silhouette_score(X[eval_idx], labels[eval_idx]) if 1 < len(distinct) < len(eval_idx) else np.nan
+            evaluation_labels = labels[eval_idx]
+            evaluation_clusters = np.unique(evaluation_labels)
+            score = (
+                silhouette_score(X[eval_idx], evaluation_labels)
+                if 1 < len(evaluation_clusters) < len(eval_idx)
+                else np.nan
+            )
             key = f"{method}_k{k}"
             label_sets[key] = labels
             sizes = pd.Series(labels).value_counts()

@@ -4,9 +4,9 @@ An introductory, reproducible unsupervised learning project using NOAA's Storm E
 
 ## Dataset
 
-Put `StormEvents_details_all.csv` in `data/raw/`. The project uses the details table because one row represents one event. It does not use the merged file, whose one-to-many joins can multiply events. The NOAA files are excluded from Git.
+Put `StormEvents_details_2010_2020.csv` in `data/raw/`. This project currently analyzes the 2010–2020 subset. It uses the details table because one row represents one event. It does not use the merged file, whose one-to-many joins can multiply events. The NOAA files are excluded from Git.
 
-The preprocessing stage reads the full details file once and writes `data/processed/cleaned_storm_data.csv`. `main.py` reuses that file when present and reads only the columns it needs. Delete the processed file if you need to rebuild it from the raw CSV.
+The preprocessing stage reads the details file and writes `data/processed/cleaned_storm_data.csv`. `main.py` reuses the processed file when it is newer than the raw CSV; otherwise it refreshes it automatically. The generated processed data should reflect the same 2010–2020 date range.
 
 ## Run in Windows PowerShell
 
@@ -18,7 +18,7 @@ python -u src/preprocessing.py
 python -u main.py
 ```
 
-Preprocessing is already complete if `data/processed/cleaned_storm_data.csv` exists. The analysis run uses a fixed random sample of up to 2,500 events (`random_state=42`) for both clustering methods. Hierarchical clustering requires pairwise comparisons and should not be run on all 1.65 million records.
+`main.py` refreshes preprocessing when needed. The analysis uses a fixed random sample of up to 2,500 events (`random_state=42`) for both clustering methods. Hierarchical clustering requires pairwise comparisons, so it runs on this reproducible sample rather than the full dataset.
 
 ## Preprocessing and feature choices
 

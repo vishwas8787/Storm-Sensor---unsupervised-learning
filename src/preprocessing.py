@@ -12,7 +12,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 RAW_FILE = (
     PROJECT_DIR / "data" / "raw"
-    / "StormEvents_details_all.csv"
+    / "StormEvents_details_2010_2020.csv"
 )
 
 PROCESSED_DIR = PROJECT_DIR / "data" / "processed"
