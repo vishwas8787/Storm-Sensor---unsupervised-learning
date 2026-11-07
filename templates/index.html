@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extreme Weather Event Grouping Studio | NOAA Storm Events</title>
+    
+    <!-- Google Fonts & Tailwind CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js and Leaflet CSS/JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Header Navigation -->
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 px-6 py-4 flex items-center justify-between shadow-xl">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-amber-500 flex items-center justify-center shadow-lg shadow-sky-500/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                    Extreme Weather Event Grouping Studio
+                </h1>
+                <p class="text-xs text-slate-400 font-mono">Unit III & IV: Hierarchical & Density-Based Clustering, PCA Visualisation</p>
+            </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="hidden lg:flex items-center space-x-3 text-xs">
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-lg flex items-center space-x-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span class="text-slate-300">NOAA 2010–2020: <strong class="text-white" id="badge-total-records">677,240</strong></span>
+            </div>
+            <div class="bg-slate-800/80 border border-slate-700/60 px-3 py-1.5 rounded-lg">
+                <span class="text-slate-300">Sample: <strong class="text-sky-400" id="badge-sample-size">2,500</strong></span>
+            </div>
+            <div class="bg-indigo-950/80 border border-indigo-700/60 px-3 py-1.5 rounded-lg text-indigo-300">
+                <span>Model: <strong class="text-white" id="badge-best-h">Ward k=3</strong> & <strong class="text-white" id="badge-best-d">DBSCAN</strong></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container: Sidebar + Content -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col justify-between py-4 px-3 flex-shrink-0 overflow-y-auto">
+            <nav class="space-y-1 text-sm font-medium">
+                <button onclick="switchTab('tab-overview')" id="btn-tab-overview" class="nav-tab active w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span>Overview & KPIs</span>
+                </button>
+                <button onclick="switchTab('tab-preprocessing')" id="btn-tab-preprocessing" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    <span>Preprocessing & EDA</span>
+                </button>
+                <button onclick="switchTab('tab-hierarchical')" id="btn-tab-hierarchical" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+                    <span>Hierarchical Lab</span>
+                </button>
+                <button onclick="switchTab('tab-dbscan')" id="btn-tab-dbscan" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    <span>DBSCAN Density Lab</span>
+                </button>
+                <button onclick="switchTab('tab-pca')" id="btn-tab-pca" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                    <span>PCA 2D/3D & Loadings</span>
+                </button>
+                <button onclick="switchTab('tab-profiles')" id="btn-tab-profiles" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    <span>Weather Archetypes</span>
+                </button>
+                <button onclick="switchTab('tab-map')" id="btn-tab-map" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span>US Storm Map</span>
+                </button>
+                <button onclick="switchTab('tab-classifier')" id="btn-tab-classifier" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    <span>Live Event Classifier</span>
+                </button>
+                <button onclick="switchTab('tab-responsible')" id="btn-tab-responsible" class="nav-tab w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all text-slate-300 hover:bg-slate-800">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    <span>Stability & Responsible AI</span>
+                </button>
+            </nav>
+
+            <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <p>Reproducible Research Project</p>
+                <p class="font-mono text-slate-400">NOAA National Centers for Environmental Information</p>
+            </div>
+        </aside>
+
+        <!-- Main Scrollable Content Area -->
+        <main class="flex-1 bg-slate-950 p-6 overflow-y-auto" id="main-content">
+            
+            <!-- TAB 1: OVERVIEW & KPIS -->
+            <section id="tab-overview" class="tab-pane active space-y-6">
+                <!-- Page Title -->
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Executive Clustering Dashboard</h2>
+                    <p class="text-sm text-slate-400">Unsupervised pattern discovery and validation across 677,240 severe weather events.</p>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                            <span>Hierarchical Optimum</span>
+                            <span class="px-2 py-0.5 rounded bg-indigo-900/60 text-indigo-300 text-[11px]">Ward</span>
+                        </div>
+                        <div class="text-3xl font-bold text-white mb-1" id="kpi-h-name">ward_k3</div>
+                        <div class="text-xs text-slate-400 flex justify-between">
+                            <span>Silhouette: <strong class="text-emerald-400" id="kpi-h-sil">0.3525</strong></span>
+                            <span>CH Index: <strong class="text-sky-400" id="kpi-h-ch">489.9</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                            <span>DBSCAN Density Optimum</span>
+                            <span class="px-2 py-0.5 rounded bg-purple-900/60 text-purple-300 text-[11px]">Density</span>
+                        </div>
+                        <div class="text-3xl font-bold text-white mb-1" id="kpi-d-name">dbscan_eps0.8_min5</div>
+                        <div class="text-xs text-slate-400 flex justify-between">
+                            <span>Non-noise Sil: <strong class="text-emerald-400" id="kpi-d-sil">0.3186</strong></span>
+                            <span>Noise Rate: <strong class="text-amber-400" id="kpi-d-noise">3.8%</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                            <span>PCA 2-Comp Variance</span>
+                            <span class="px-2 py-0.5 rounded bg-sky-900/60 text-sky-300 text-[11px]">Projection</span>
+                        </div>
+                        <div class="text-3xl font-bold text-sky-400 mb-1" id="kpi-pca-var">39.5%</div>
+                        <div class="text-xs text-slate-400">
+                            Cumulative 3-Comp Variance: <strong class="text-white" id="kpi-pca-3var">55.1%</strong>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm hover:border-slate-700 transition">
+                        <div class="flex items-center justify-between text-slate-400 text-xs font-medium uppercase tracking-wider mb-2">
+                            <span>Cross-Method Stability</span>
+                            <span class="px-2 py-0.5 rounded bg-teal-900/60 text-teal-300 text-[11px]">ARI</span>
+                        </div>
+                        <div class="text-3xl font-bold text-teal-400 mb-1" id="kpi-cross-ari">0.824</div>
+                        <div class="text-xs text-slate-400">
+                            Ward k=3 vs DBSCAN cluster partition agreement
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Radar Chart & Summary Highlights -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Cluster Profiles Radar -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-base font-semibold text-white">Cluster Profile Radar</h3>
+                                <p class="text-xs text-slate-400">Standardized median deviations across meteorological dimensions.</p>
+                            </div>
+                        </div>
+                        <div class="relative h-72">
+                            <canvas id="chart-radar-profiles"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Discovered Taxonomy Archetypes -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-semibold text-white mb-2">Discovered Weather Taxonomies</h3>
+                            <p class="text-xs text-slate-400 mb-4">Unsupervised groupings delineate 3 primary physical archetypes:</p>
+                            
+                            <div class="space-y-3">
+                                <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-xs">C1</div>
+                                    <div class="text-xs">
+                                        <div class="font-semibold text-white">Prolonged Synoptic Winter / Low-Intensity Events</div>
+                                        <div class="text-slate-400 mt-0.5">High duration (mean 72 hrs), winter season (Dec-Feb), heavy snow/winter storm, minimal direct casualties.</div>
+                                    </div>
+                                </div>
+
+                                <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-xs">C2</div>
+                                    <div class="text-xs">
+                                        <div class="font-semibold text-white">Catastrophic Casualty & Severe Outbreaks</div>
+                                        <div class="text-slate-400 mt-0.5">Violent tornadoes, major floods, and extreme heat. High casualty index (mean 4.0 injuries, 1.2 deaths) and destructive damage.</div>
+                                    </div>
+                                </div>
+
+                                <div class="p-3 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start space-x-3">
+                                    <div class="w-8 h-8 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">C3</div>
+                                    <div class="text-xs">
+                                        <div class="font-semibold text-white">Localized High-Frequency Convective Storms</div>
+                                        <div class="text-slate-400 mt-0.5">Rapid onset (&lt; 2 hours), spring/summer convective season, thunderstorm wind, hail, moderate localized property damage.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                            <span>Evaluated in 7D standardized feature space</span>
+                            <span class="text-indigo-400 cursor-pointer hover:underline" onclick="switchTab('tab-profiles')">View Full Profiles &rarr;</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Static Visualizations Quick Gallery -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-3">Core Visualizations Snapshot</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+                            <img src="/plots/hierarchical_pca.png" alt="Hierarchical PCA" class="w-full h-48 object-cover hover:scale-105 transition duration-300">
+                            <div class="p-2 text-xs text-slate-300 text-center font-medium">Hierarchical Clusters in PCA Space</div>
+                        </div>
+                        <div class="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+                            <img src="/plots/dbscan_pca.png" alt="DBSCAN PCA" class="w-full h-48 object-cover hover:scale-105 transition duration-300">
+                            <div class="p-2 text-xs text-slate-300 text-center font-medium">DBSCAN Density & Noise in PCA Space</div>
+                        </div>
+                        <div class="rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+                            <img src="/plots/dendrogram_ward.png" alt="Ward Dendrogram" class="w-full h-48 object-cover hover:scale-105 transition duration-300">
+                            <div class="p-2 text-xs text-slate-300 text-center font-medium">Truncated Ward Linkage Dendrogram</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: PREPROCESSING & EDA -->
+            <section id="tab-preprocessing" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Dataset Preprocessing & Exploratory Analysis</h2>
+                    <p class="text-sm text-slate-400">Documenting variable selection, imputation rationale, transformations, and feature standardization.</p>
+                </div>
+
+                <!-- Preprocessing Pipeline Steps -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-xs text-sky-400 font-bold uppercase mb-1">Step 1</div>
+                        <div class="font-semibold text-white text-sm">Deduplication & Format</div>
+                        <div class="text-xs text-slate-400 mt-1">Unique EVENT_ID validation; parsed BEGIN and END timestamps with <code class="text-slate-300">%d-%b-%y %H:%M:%S</code>.</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-xs text-amber-400 font-bold uppercase mb-1">Step 2</div>
+                        <div class="font-semibold text-white text-sm">Damage USD Parsing</div>
+                        <div class="text-xs text-slate-400 mt-1">Converted K ($1K), M ($1M), and B ($1B) multipliers into exact floats. Negatives masked to NaN.</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-xs text-emerald-400 font-bold uppercase mb-1">Step 3</div>
+                        <div class="font-semibold text-white text-sm">Missing Value Strategy</div>
+                        <div class="text-xs text-slate-400 mt-1">Missing damage imputed as $0.00 (NWS protocol: unquantified damage). Missing duration imputed with sample median.</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-xs text-purple-400 font-bold uppercase mb-1">Step 4</div>
+                        <div class="font-semibold text-white text-sm">Log1p & Scaling</div>
+                        <div class="text-xs text-slate-400 mt-1">Applied <code class="text-slate-300">log1p</code> to heavy-tailed features, cyclical sin/cos to month, and scaled with <code class="text-slate-300">StandardScaler</code>.</div>
+                    </div>
+                </div>
+
+                <!-- Feature Preprocessing Documentation Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-3">Model Feature Transformation Matrix</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="px-4 py-3">Feature</th>
+                                    <th class="px-4 py-3">Missing in Sample</th>
+                                    <th class="px-4 py-3">Missing %</th>
+                                    <th class="px-4 py-3">Mathematical Transformation</th>
+                                    <th class="px-4 py-3">Imputation Decision</th>
+                                    <th class="px-4 py-3">Standardization</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-preprocessing-body" class="divide-y divide-slate-800">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- EDA Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        <h4 class="text-xs font-bold text-white mb-2">Missing Value Frequencies</h4>
+                        <img src="/plots/missing_values.png" alt="Missing Values" class="w-full h-64 object-contain rounded bg-slate-950 p-2">
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        <h4 class="text-xs font-bold text-white mb-2">Event Type Distribution</h4>
+                        <img src="/plots/event_distribution.png" alt="Event Distribution" class="w-full h-64 object-contain rounded bg-slate-950 p-2">
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+                        <h4 class="text-xs font-bold text-white mb-2">Spearman Correlation Matrix</h4>
+                        <img src="/plots/correlation_heatmap.png" alt="Correlations" class="w-full h-64 object-contain rounded bg-slate-950 p-2">
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: HIERARCHICAL CLUSTERING LAB -->
+            <section id="tab-hierarchical" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Agglomerative Hierarchical Clustering Lab</h2>
+                    <p class="text-sm text-slate-400">Comparing Single, Complete, Average, and Ward linkages across Cophenetic correlation and validation metrics.</p>
+                </div>
+
+                <!-- Linkage Comparison Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-900 border border-indigo-700/50 p-4 rounded-xl relative overflow-hidden">
+                        <div class="absolute top-2 right-2 px-2 py-0.5 rounded bg-indigo-900 text-indigo-300 text-[10px] font-bold">Selected</div>
+                        <div class="text-sm font-bold text-white">Ward's Linkage</div>
+                        <div class="text-xs text-slate-400 mt-1">Minimizes total within-cluster variance. Produces balanced, compact clusters. Resists chaining.</div>
+                        <div class="text-xs text-indigo-400 font-mono mt-2">CPCC: 0.4811 | Sil: 0.3525</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-sm font-bold text-white">Average Linkage</div>
+                        <div class="text-xs text-slate-400 mt-1">Highest Cophenetic correlation (0.9350). However, isolates extreme outliers into singletons (2496:1).</div>
+                        <div class="text-xs text-slate-400 font-mono mt-2">CPCC: 0.9350 | Chaining Risk</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-sm font-bold text-white">Complete Linkage</div>
+                        <div class="text-xs text-slate-400 mt-1">Maximizes pairwise distance. Sensitive to noise, isolates individual distant storms.</div>
+                        <div class="text-xs text-slate-400 font-mono mt-2">CPCC: 0.8583 | Outlier splits</div>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                        <div class="text-sm font-bold text-white">Single Linkage</div>
+                        <div class="text-xs text-slate-400 mt-1">Nearest-neighbor distance. Severe chaining effect; merges dense points into 1 mega-cluster.</div>
+                        <div class="text-xs text-slate-400 font-mono mt-2">CPCC: 0.8106 | Chaining artifact</div>
+                    </div>
+                </div>
+
+                <!-- Truncated Dendrogram Gallery -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-white">Hierarchical Dendrogram Explorer</h3>
+                            <p class="text-xs text-slate-400">Truncated dendrograms (p=30) demonstrating merger distances and tree topology.</p>
+                        </div>
+                        <!-- Linkage Selector Tabs -->
+                        <div class="flex space-x-1 bg-slate-800 p-1 rounded-lg text-xs">
+                            <button onclick="setDendrogram('ward')" id="btn-dend-ward" class="px-3 py-1.5 rounded font-medium bg-indigo-600 text-white">Ward</button>
+                            <button onclick="setDendrogram('complete')" id="btn-dend-complete" class="px-3 py-1.5 rounded font-medium text-slate-300 hover:text-white">Complete</button>
+                            <button onclick="setDendrogram('average')" id="btn-dend-average" class="px-3 py-1.5 rounded font-medium text-slate-300 hover:text-white">Average</button>
+                            <button onclick="setDendrogram('single')" id="btn-dend-single" class="px-3 py-1.5 rounded font-medium text-slate-300 hover:text-white">Single</button>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-lg flex items-center justify-center">
+                        <img id="dendrogram-img" src="/plots/dendrogram_ward.png" alt="Dendrogram" class="max-h-[460px] object-contain rounded">
+                    </div>
+                </div>
+
+                <!-- Full Hierarchical Results Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-3">Hierarchical Configurations Metric Table</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="px-3 py-2.5">Configuration</th>
+                                    <th class="px-3 py-2.5">Method</th>
+                                    <th class="px-3 py-2.5">Clusters (k)</th>
+                                    <th class="px-3 py-2.5">CPCC</th>
+                                    <th class="px-3 py-2.5">Silhouette</th>
+                                    <th class="px-3 py-2.5">Davies-Bouldin</th>
+                                    <th class="px-3 py-2.5">Calinski-Harabasz</th>
+                                    <th class="px-3 py-2.5">Smallest Cluster</th>
+                                    <th class="px-3 py-2.5">Largest Cluster</th>
+                                    <th class="px-3 py-2.5">Ratio</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-hierarchical-body" class="divide-y divide-slate-800">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: DBSCAN DENSITY LAB -->
+            <section id="tab-dbscan" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">DBSCAN Density-Based Clustering Lab</h2>
+                    <p class="text-sm text-slate-400">Discovering clusters of arbitrary density shape and isolating non-conforming extreme weather anomalies as noise (-1).</p>
+                </div>
+
+                <!-- K-Distance Curve and Noise Sensitivity Plots -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">k-NN Distance Curve (Knee Diagnostic)</h3>
+                        <p class="text-xs text-slate-400 mb-3">Sorted distance to 8th nearest neighbor. The knee defines the transition from dense core to sparse noise.</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/dbscan_k_distance.png" alt="k-distance curve" class="w-full h-64 object-contain">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">Parameter Sensitivity Grid</h3>
+                        <p class="text-xs text-slate-400 mb-3">Sensitivity of noise percentage and cluster count across eps and min_samples.</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/dbscan_parameter_analysis.png" alt="DBSCAN sensitivity" class="w-full h-64 object-contain">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DBSCAN Metric Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-3">DBSCAN Grid Search Results</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-700">
+                                <tr>
+                                    <th class="px-3 py-2.5">Configuration</th>
+                                    <th class="px-3 py-2.5">eps</th>
+                                    <th class="px-3 py-2.5">min_samples</th>
+                                    <th class="px-3 py-2.5">Clusters</th>
+                                    <th class="px-3 py-2.5">Noise Count</th>
+                                    <th class="px-3 py-2.5">Noise %</th>
+                                    <th class="px-3 py-2.5">Core Points</th>
+                                    <th class="px-3 py-2.5">Border Points</th>
+                                    <th class="px-3 py-2.5">Non-noise Sil</th>
+                                    <th class="px-3 py-2.5">Davies-Bouldin</th>
+                                    <th class="px-3 py-2.5">Calinski-Harabasz</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-dbscan-body" class="divide-y divide-slate-800 font-mono text-[11px]">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: PCA 2D/3D & LOADINGS -->
+            <section id="tab-pca" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">PCA Visualisation Studio & Feature Loadings</h2>
+                    <p class="text-sm text-slate-400">High-dimensional projections, scree analysis, and biplot loadings explaining cluster geometry.</p>
+                </div>
+
+                <!-- PCA Controls & Interactive Scatter -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                        <div>
+                            <h3 class="text-base font-semibold text-white">Interactive PCA Scatter Plot (1,200 Sampled Storms)</h3>
+                            <p class="text-xs text-slate-400">Hover over any point to view storm impact attributes. Click points to inspect details.</p>
+                        </div>
+                        <!-- Toggle Hierarchical vs DBSCAN coloring -->
+                        <div class="flex items-center space-x-2 bg-slate-800 p-1 rounded-lg text-xs">
+                            <span class="text-slate-400 px-2">Color by:</span>
+                            <button onclick="setPCAColorMode('hierarchical')" id="btn-pca-color-h" class="px-3 py-1 rounded font-medium bg-indigo-600 text-white">Hierarchical (Ward)</button>
+                            <button onclick="setPCAColorMode('dbscan')" id="btn-pca-color-d" class="px-3 py-1 rounded font-medium text-slate-300 hover:text-white">DBSCAN</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Chart Canvas -->
+                        <div class="lg:col-span-2 bg-slate-950 p-4 rounded-xl relative h-[480px]">
+                            <canvas id="chart-pca-scatter"></canvas>
+                        </div>
+
+                        <!-- Point Inspector Card -->
+                        <div class="bg-slate-950 p-5 rounded-xl border border-slate-800/80 flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-xs uppercase font-bold text-sky-400 tracking-wider mb-3">Event Inspector</h4>
+                                <div id="pca-inspector-content" class="space-y-2 text-xs text-slate-300">
+                                    <div class="text-slate-400 italic">Click or hover over any point in the PCA scatter plot to inspect its real-world NOAA storm parameters.</div>
+                                </div>
+                            </div>
+                            <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-400">
+                                <div>PC1: Seasonal & Duration Axis</div>
+                                <div>PC2: Casualty Severity Axis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Static High-Res PCA Biplot Comparison -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">Hierarchical Projection with Biplot Vectors</h3>
+                        <p class="text-xs text-slate-400 mb-3">Ward k=3 cluster separation overlaid with feature loading vectors.</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/hierarchical_pca.png" alt="Hierarchical PCA" class="w-full h-72 object-contain">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">DBSCAN Density & Noise Projection</h3>
+                        <p class="text-xs text-slate-400 mb-3">DBSCAN clusters in PCA space with anomalous outliers marked as noise (-1).</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/dbscan_pca.png" alt="DBSCAN PCA" class="w-full h-72 object-contain">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scree Plot & PCA Loadings Table -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Scree Plot -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">PCA Scree Plot & Cumulative Variance</h3>
+                        <p class="text-xs text-slate-400 mb-3">Eigenvalue scree plot confirming 3 components explain ~55% of total variance.</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/pca_scree.png" alt="Scree Plot" class="w-full h-64 object-contain">
+                        </div>
+                    </div>
+
+                    <!-- Loadings Biplot Table -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">Principal Component Loadings</h3>
+                        <p class="text-xs text-slate-400 mb-3">Feature eigenvectors quantifying each variable's contribution to PC1, PC2, and PC3.</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-800/80 text-slate-400 uppercase text-[11px] font-semibold border-b border-slate-700">
+                                    <tr>
+                                        <th class="px-3 py-2">Feature</th>
+                                        <th class="px-3 py-2">PC1 Loading</th>
+                                        <th class="px-3 py-2">PC2 Loading</th>
+                                        <th class="px-3 py-2">PC3 Loading</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-pca-loadings-body" class="divide-y divide-slate-800 font-mono text-[11px]">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: WEATHER ARCHETYPES & PROFILES -->
+            <section id="tab-profiles" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Cluster Meteorological Profiles & Archetypes</h2>
+                    <p class="text-sm text-slate-400">Interpreting clusters through real physical units: mean and median USD damage, casualties, and duration.</p>
+                </div>
+
+                <!-- Deep Archetype Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-1 rounded bg-sky-900/60 text-sky-300 text-xs font-bold">Cluster 1</span>
+                            <span class="text-xs text-slate-400">n = 575 (23.0%)</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white mb-1">Prolonged Synoptic Systems</h3>
+                        <p class="text-xs text-slate-400 mb-4">Extended duration events occurring during cold season months.</p>
+                        
+                        <div class="space-y-2 text-xs border-t border-slate-800 pt-3">
+                            <div class="flex justify-between"><span class="text-slate-400">Median Duration:</span><strong class="text-white">19.0 hours</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Mean Duration:</span><strong class="text-white">72.0 hours</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Casualties:</span><strong class="text-white">0.0 (near-zero direct)</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Primary Types:</span><strong class="text-sky-300">Winter Storm, Heavy Snow, Flood</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-1 rounded bg-rose-900/60 text-rose-300 text-xs font-bold">Cluster 2</span>
+                            <span class="text-xs text-slate-400">n = 18 (0.7%)</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white mb-1">Catastrophic Hazard Outbreaks</h3>
+                        <p class="text-xs text-slate-400 mb-4">Rare, high-consequence disasters with significant human casualties.</p>
+                        
+                        <div class="space-y-2 text-xs border-t border-slate-800 pt-3">
+                            <div class="flex justify-between"><span class="text-slate-400">Mean Injuries:</span><strong class="text-rose-400">4.04 per event</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Mean Fatalities:</span><strong class="text-rose-400">1.17 per event</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Median Duration:</span><strong class="text-white">6.3 hours</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Primary Types:</span><strong class="text-rose-300">Tornado, Flash Flood, Excessive Heat</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-1 rounded bg-emerald-900/60 text-emerald-300 text-xs font-bold">Cluster 3</span>
+                            <span class="text-xs text-slate-400">n = 1,907 (76.3%)</span>
+                        </div>
+                        <h3 class="text-base font-bold text-white mb-1">Localized Convective Storms</h3>
+                        <p class="text-xs text-slate-400 mb-4">Sudden onset, short duration warm-season storm activity.</p>
+                        
+                        <div class="space-y-2 text-xs border-t border-slate-800 pt-3">
+                            <div class="flex justify-between"><span class="text-slate-400">Median Duration:</span><strong class="text-white">&lt; 10 minutes</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Mean Property Damage:</span><strong class="text-emerald-400">$450,000</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Seasonality:</span><strong class="text-white">Spring / Summer (May-Aug)</strong></div>
+                            <div class="flex justify-between"><span class="text-slate-400">Primary Types:</span><strong class="text-emerald-300">Thunderstorm Wind, Hail, High Wind</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Heatmap Visualizer -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">Hierarchical Profile Heatmap</h3>
+                        <p class="text-xs text-slate-400 mb-3">Standardized feature deviation showing distinct cluster signatures.</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/hierarchical_cluster_profile_heatmap.png" alt="Hierarchical Heatmap" class="w-full h-72 object-contain">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-2">DBSCAN Profile Heatmap</h3>
+                        <p class="text-xs text-slate-400 mb-3">Density cluster signatures (noise points excluded).</p>
+                        <div class="bg-slate-950 p-2 rounded-lg">
+                            <img src="/plots/dbscan_cluster_profile_heatmap.png" alt="DBSCAN Heatmap" class="w-full h-72 object-contain">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: US STORM MAP -->
+            <section id="tab-map" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Geographic Distribution of Clustered Storms</h2>
+                    <p class="text-sm text-slate-400">Interactive map displaying sampled extreme weather events across the continental United States.</p>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-4">
+                        <div class="flex items-center space-x-4 text-xs">
+                            <div class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-sky-500"></span><span>C1: Prolonged Synoptic</span></div>
+                            <div class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-rose-500"></span><span>C2: Catastrophic Outbreak</span></div>
+                            <div class="flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span>C3: Convective Storms</span></div>
+                        </div>
+                        <div class="text-xs text-slate-400">
+                            Click any storm marker to view location, damages, and duration.
+                        </div>
+                    </div>
+
+                    <!-- Leaflet Map Container -->
+                    <div id="storm-map" class="w-full h-[520px] rounded-xl overflow-hidden border border-slate-800"></div>
+                </div>
+            </section>
+
+            <!-- TAB 8: LIVE EVENT CLASSIFIER -->
+            <section id="tab-classifier" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Live Storm Event Classifier & Scenario Simulator</h2>
+                    <p class="text-sm text-slate-400">Test hypothetical or historical weather scenarios to compute standardized features, PCA projection, and cluster membership.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Input Form -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                        <h3 class="text-base font-semibold text-white mb-4">Event Parameters</h3>
+                        <form id="form-classifier" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Duration (Hours)</label>
+                                <input type="number" id="input-duration" value="1.5" min="0" step="0.1" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                <span class="text-[11px] text-slate-400">0.2 hrs for quick hail, 48 hrs for major blizzard</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Property Damage ($ USD)</label>
+                                    <input type="number" id="input-prop-damage" value="50000" min="0" step="1000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Crop Damage ($ USD)</label>
+                                    <input type="number" id="input-crop-damage" value="0" min="0" step="1000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Total Injuries</label>
+                                    <input type="number" id="input-injuries" value="0" min="0" step="1" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Total Fatalities</label>
+                                    <input type="number" id="input-deaths" value="0" min="0" step="1" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Event Month (Seasonality)</label>
+                                <select id="input-month" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+                                    <option value="1">January (Winter)</option>
+                                    <option value="2">February (Winter)</option>
+                                    <option value="3">March (Early Spring)</option>
+                                    <option value="4">April (Spring Tornado Season)</option>
+                                    <option value="5">May (Spring Tornado Season)</option>
+                                    <option value="6" selected>June (Summer Convective)</option>
+                                    <option value="7">July (Summer Heat / Convective)</option>
+                                    <option value="8">August (Summer / Tropical)</option>
+                                    <option value="9">September (Autumn / Tropical)</option>
+                                    <option value="10">October (Autumn Transition)</option>
+                                    <option value="11">November (Late Autumn)</option>
+                                    <option value="12">December (Winter)</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="w-full bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg transition duration-200 shadow-lg shadow-sky-500/20 text-sm">
+                                Classify Event & Project onto PCA Space
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Output Results Card -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-base font-semibold text-white mb-2">Live Classification Output</h3>
+                            <p class="text-xs text-slate-400 mb-4">Real-time inference using fitted StandardScaler, PCA transformation, and centroid proximity.</p>
+
+                            <div id="classifier-result-box" class="space-y-4">
+                                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                                    <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Hierarchical Cluster Assignment</div>
+                                    <div class="text-2xl font-bold text-sky-400" id="res-h-archetype">Cluster 3: Frequent Convective Storms</div>
+                                    <p class="text-xs text-slate-300 mt-2" id="res-h-desc">Short duration (&lt;2 hrs), localized damage, typical of thunderstorm wind and hail.</p>
+                                    <div class="text-xs text-slate-400 mt-2 font-mono" id="res-h-dist">Distance to centroid: 0.428</div>
+                                </div>
+
+                                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                                    <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">DBSCAN Density Classification</div>
+                                    <div class="text-lg font-bold text-purple-400" id="res-d-cluster">Cluster 0 (Core Density Region)</div>
+                                    <p class="text-xs text-slate-400 mt-1" id="res-d-note">Conforms to standard convective storm density distribution.</p>
+                                </div>
+
+                                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800">
+                                    <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">PCA Projection Coordinates</div>
+                                    <div class="grid grid-cols-2 gap-4 text-xs font-mono">
+                                        <div>PC1: <strong class="text-white" id="res-pca-pc1">-0.142</strong></div>
+                                        <div>PC2: <strong class="text-white" id="res-pca-pc2">0.285</strong></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-800 text-[11px] text-slate-400 italic">
+                            *This classification is exploratory and serves risk-screening purposes only.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 9: STABILITY & RESPONSIBLE AI -->
+            <section id="tab-responsible" class="tab-pane hidden space-y-6">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight text-white">Stability Analysis & Responsible AI Report</h2>
+                    <p class="text-sm text-slate-400">Evaluating partition stability via Adjusted Rand Index (ARI), reporting biases, and ethical guidelines.</p>
+                </div>
+
+                <!-- ARI Stability Matrix -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-2">Adjusted Rand Index (ARI) Stability Matrix</h3>
+                    <p class="text-xs text-slate-400 mb-3">Pairwise cluster agreement across all 16 tested configurations (ARI = 1.0 indicates identical groupings).</p>
+                    <div class="bg-slate-950 p-2 rounded-lg">
+                        <img src="/plots/stability_ari.png" alt="ARI Stability" class="w-full max-h-[500px] object-contain">
+                    </div>
+                </div>
+
+                <!-- Responsible AI Text Document -->
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-base font-semibold text-white mb-3">Responsible Interpretation and Limitations Analysis</h3>
+                    <div class="bg-slate-950 p-5 rounded-lg border border-slate-800 font-mono text-xs text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap" id="responsible-ai-text">
+                        Loading Responsible AI report...
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Application Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

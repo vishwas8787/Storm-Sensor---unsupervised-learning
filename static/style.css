@@ -1,0 +1,83 @@
+/* Custom CSS for NOAA Extreme Weather Grouping Studio */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* Nav Tab Active State */
+.nav-tab.active {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    border-left: 3px solid #38bdf8;
+}
+
+/* Leaflet Map Dark Mode Styling */
+.leaflet-container {
+    background-color: #0b1120 !important;
+    font-family: inherit;
+}
+
+.leaflet-popup-content-wrapper {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-popup-tip {
+    background: #0f172a !important;
+}
+
+/* Leaflet Layer Switcher Dark Styling */
+.leaflet-control-layers {
+    background: #0f172a !important;
+    color: #f1f5f9 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    font-size: 11px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-control-layers label {
+    margin-bottom: 3px;
+    cursor: pointer;
+}
+
+/* Pulse animation for live markers */
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+}
+
+.live-user-point {
+    animation: pulse-ring 2s infinite ease-in-out;
+}
